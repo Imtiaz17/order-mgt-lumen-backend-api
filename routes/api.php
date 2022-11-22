@@ -15,4 +15,6 @@ Route::group([
 ], function ($router) {
     Route::get('/order','OrderController@index');
     Route::post('/order','OrderController@store');
+    Route::post('/portpos-ipn','OrderController@portposIpn');
+    Route::post('/orderRefund','OrderController@orderRefund');
 });

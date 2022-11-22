@@ -9,6 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class OrderController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('jwt');
+    }
     /**
      * Display a listing of the resource.
      *
@@ -108,5 +112,32 @@ class OrderController extends Controller
     public function destroy(Order $order)
     {
         //
+    }
+
+    public function portposIpn(Request $request)
+    {
+        $invoiceId = $request->invoice;
+        $amount = $request->amount;
+
+        $order=Order::where('invoice_id',$invoiceId)->first();
+
+        if($order->amount==$amount){
+            $order->status='Paid';
+        }
+        $order->save();
+
+    }
+
+    public  function orderRefund(Request $request)
+    {
+        $invoiceId = $request->invoice_id;
+        $amount=$request->amount;
+        $order =Order::where('invoice_id',$invoiceId)->first();
+        if($order->amount<$amount){
+            return response()->json(['success' => false, 'msg' =>'Refund amount cant be greater than purchase amount'], 400);
+        }
+        $response = (new OrderPayment())->makeRefund($order,$amount);
+
+        return response()->json(['success' => true, 'payment' => $response], 200);
     }
 }
