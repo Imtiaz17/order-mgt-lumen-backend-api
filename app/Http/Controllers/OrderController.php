@@ -11,7 +11,7 @@ class OrderController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('jwt');
+        $this->middleware('auth:api');
     }
     /**
      * Display a listing of the resource.
@@ -20,6 +20,7 @@ class OrderController extends Controller
      */
     public function index()
     {
+        //get all the orders
         $order = Order::all();
         return response()->json(['data' => $order], 200);
     }
@@ -43,7 +44,7 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $data = $request->all();
-
+        //order form validation
         $this->validate($request, [
             'customer_name' => 'required',
             'customer_email' => 'required|email',
@@ -56,8 +57,11 @@ class OrderController extends Controller
         $data = $request->all();
         DB::beginTransaction();
         try {
+            //create order
             $order = Order::makeOrder($data);
+            //make payment to portwallet
             $response = (new OrderPayment())->makePayment($order);
+            //update invoice id and url
             $order->invoice_id=$response['data']['invoice_id'];
             $order->invoice_url=$response['data']['action']['url'];
             $order->save();
@@ -69,16 +73,7 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\Order  $order
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Order $order)
-    {
-        //
-    }
+
 
     /**
      * Show the form for editing the specified resource.
@@ -91,36 +86,15 @@ class OrderController extends Controller
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Order  $order
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, Order $order)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\Order  $order
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Order $order)
-    {
-        //
-    }
+    //Order Payment Status update through PortPos IPN
 
     public function portposIpn(Request $request)
     {
         $invoiceId = $request->invoice;
         $amount = $request->amount;
-
+        //get the specific order by invoice id
         $order=Order::where('invoice_id',$invoiceId)->first();
-
+        //update order status
         if($order->amount==$amount){
             $order->status='Paid';
         }
@@ -128,14 +102,19 @@ class OrderController extends Controller
 
     }
 
+    //order refund
+
     public  function orderRefund(Request $request)
     {
         $invoiceId = $request->invoice_id;
         $amount=$request->amount;
+        //get the specific order by invoice id
         $order =Order::where('invoice_id',$invoiceId)->first();
+        //update requested amount is greater then order amount
         if($order->amount<$amount){
             return response()->json(['success' => false, 'msg' =>'Refund amount cant be greater than purchase amount'], 400);
         }
+        //refund in portwallet
         $response = (new OrderPayment())->makeRefund($order,$amount);
 
         return response()->json(['success' => true, 'payment' => $response], 200);

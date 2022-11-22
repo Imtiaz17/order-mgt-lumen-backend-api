@@ -26,8 +26,8 @@ class OrderPayment
             'order' => array(
                 'amount' => (int)$order->amount,
                 'currency' => 'BDT',
-                'redirect_url' => 'http://www.yoursite.com/payment',
-                'ipn_url' => 'http://www.yoursite.com/ipn',
+                'redirect_url' => 'http://localhost:3000',
+                'ipn_url' => 'http://localhost:8000/api/portpos-ipn',
                 'validity' => 900,
             ),
             'product' => array(
